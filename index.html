@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Garden Defenders</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #1b4332;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+      user-select: none;
+    }
+
+    h1 { margin: 0 0 10px 0; color: #ffb300; }
+
+    #hud {
+      display: flex;
+      gap: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 12px 24px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-weight: bold;
+      font-size: 16px;
+      border: 1px solid #52b788;
+    }
+
+    .hud-highlight { color: #ffb300; }
+
+    #main-wrapper {
+      display: flex;
+      gap: 15px;
+    }
+
+    #game-container {
+      position: relative;
+      width: 580px;
+      height: 420px;
+      background-color: #2d6a4f;
+      border: 4px solid #081c15;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    }
+
+    /* Left side: Garden Plot Rows */
+    #garden-zone {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 180px;
+      height: 100%;
+      background-color: #52b788;
+      border-right: 4px solid #1b4332;
+      display: grid;
+      grid-template-rows: repeat(4, 1fr);
+      padding: 8px;
+      gap: 8px;
+    }
+
+    .plot-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #74c69d;
+      border: 2px dashed #2d6a4f;
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .plant-icon { font-size: 32px; }
+    
+    .hp-bar {
+      position: absolute;
+      bottom: 6px;
+      left: 10%;
+      width: 80%;
+      height: 6px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    
+    .hp-fill {
+      height: 100%;
+      background: #76ff03;
+      width: 100%;
+      transition: width 0.1s;
+    }
+
+    .fence-indicator {
+      position: absolute;
+      right: -10px;
+      font-size: 20px;
+      z-index: 2;
+    }
+
+    /* Right side: Lanes */
+    #threat-zone {
+      position: absolute;
+      left: 180px;
+      top: 0;
+      width: 400px;
+      height: 100%;
+      display: grid;
+      grid-template-rows: repeat(4, 1fr);
+    }
+
+    .lane {
+      border-bottom: 1px dashed rgba(255,255,255,0.15);
+      position: relative;
+    }
+
+    .threat {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 28px;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .threat.boss {
+      font-size: 42px;
+      filter: drop-shadow(0 0 8px orange);
+    }
+
+    .threat:hover {
+      transform: translateY(-50%) scale(1.3);
+    }
+
+    /* Overlay Screens */
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.88);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      z-index: 10;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .overlay h2 {
+      font-size: 32px;
+      margin: 0;
+    }
+
+    #game-over-overlay h2 { color: #ff5252; }
+    #victory-overlay h2 { color: #ffd54f; }
+    #difficulty-overlay h2 { color: #ffb300; }
+
+    .overlay p {
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .difficulty-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 220px;
+      margin-top: 10px;
+    }
+
+    /* Side Panels Container */
+    #side-panels {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .panel {
+      width: 280px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid #52b788;
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .panel h2 {
+      margin: 0 0 5px 0;
+      text-align: center;
+      color: #ffb300;
+      font-size: 18px;
+    }
+
+    .action-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: bold;
+      background-color: #d8f3dc;
+      color: #1b4332;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .action-btn:hover:not(:disabled) { background-color: #b7e4c7; }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .sell-btn {
+      background-color: #ffe082;
+      color: #5d4037;
+    }
+    .sell-btn:hover:not(:disabled) { background-color: #ffd54f; }
+
+    .game-btn {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      background-color: #ffb300;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .game-btn:hover { background-color: #ffa000; }
+
+    .game-btn.easy { background-color: #81c784; color: #1b4332; }
+    .game-btn.easy:hover { background-color: #66bb6a; }
+
+    .game-btn.medium { background-color: #ffb300; color: #333; }
+    .game-btn.medium:hover { background-color: #ffa000; }
+
+    .game-btn.hard { background-color: #e57373; color: #fff; }
+    .game-btn.hard:hover { background-color: #ef5350; }
+
+    .game-btn.secondary {
+      background-color: #52b788;
+      color: #1b4332;
+    }
+
+    .game-btn.secondary:hover { background-color: #74c69d; }
+  </style>
+</head>
+<body>
+
+  <h1>🌻 Garden Defenders</h1>
+
+  <div id="hud">
+    <div>🪙 Coins: <span id="coins-display" class="hud-highlight">50</span></div>
+    <div>🌊 Wave: <span id="wave-display" class="hud-highlight">1</span></div>
+    <div>⏱️ Next Wave: <span id="timer-display" class="hud-highlight">15</span>s</div>
+    <div>📦 🍅<span id="storage-tomatoes">0</span> 🌽<span id="storage-corn">0</span></div>
+  </div>
+
+  <div id="main-wrapper">
+    <div id="game-container">
+      <div id="garden-zone">
+        <div class="plot-row" id="plot-0"></div>
+        <div class="plot-row" id="plot-1"></div>
+        <div class="plot-row" id="plot-2"></div>
+        <div class="plot-row" id="plot-3"></div>
+      </div>
+      <div id="threat-zone">
+        <div class="lane" id="lane-0"></div>
+        <div class="lane" id="lane-1"></div>
+        <div class="lane" id="lane-2"></div>
+        <div class="lane" id="lane-3"></div>
+      </div>
+
+      <div id="difficulty-overlay" class="overlay" style="display: none;">
+        <h2>Select Difficulty</h2>
+        <p>Choose your challenge level:</p>
+        <div class="difficulty-group">
+          <button class="game-btn easy" onclick="startGame('easy')">🌱 Easy Mode</button>
+          <button class="game-btn medium" onclick="startGame('medium')">🌻 Medium Mode</button>
+          <button class="game-btn hard" onclick="startGame('hard')">🔥 Hard Mode</button>
+        </div>
+      </div>
+
+      <div id="victory-overlay" class="overlay" style="display: none;">
+        <h2>🏆 Victory!</h2>
+        <p>You defended your garden through Wave 15!</p>
+        <div class="btn-group">
+          <button class="game-btn secondary" onclick="enableEndlessMode()">♾️ Keep Playing (Endless)</button>
+          <button class="game-btn" onclick="openDifficultySelect()">🔄 Play Again</button>
+        </div>
+      </div>
+
+      <div id="game-over-overlay" class="overlay" style="display: none;">
+        <h2>💥 Game Over</h2>
+        <p>All your crops were destroyed!</p>
+        <p>You survived until <strong>Wave <span id="final-wave-display">1</span></strong></p>
+        <div class="btn-group">
+          <button class="game-btn" onclick="openDifficultySelect()">🔄 Retry</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="side-panels">
+      
+      <div class="panel" id="market-panel">
+        <h2>🧺 Harvest & Market</h2>
+        
+        <button class="action-btn sell-btn" id="sell-tomato" onclick="sellCrop('Tomato')">
+          <span>🍅 Sell Tomatoes (5 Coins EA)</span>
+          <span>Sell All</span>
+        </button>
+
+        <button class="action-btn sell-btn" id="sell-corn" onclick="sellCrop('Corn')">
+          <span>🌽 Sell Corn (12 Coins EA)</span>
+          <span>Sell All</span>
+        </button>
+      </div>
+
+      <div class="panel" id="shop-panel">
+        <h2>🛒 Defense Shop</h2>
+        
+        <button class="action-btn" id="buy-tomato" onclick="buyCrop('Tomato', 30)">
+          <span>🍅 Plant Tomato</span>
+          <span>🪙 30</span>
+        </button>
+
+        <button class="action-btn" id="buy-corn" onclick="buyCrop('Corn', 50)">
+          <span>🌽 Plant Corn</span>
+          <span>🪙 50</span>
+        </button>
+
+        <button class="action-btn" id="buy-heal" onclick="healCrops(40)">
+          <span>🧪 Heal All Crops</span>
+          <span>🪙 40</span>
+        </button>
+
+        <button class="action-btn" id="buy-fence" onclick="buyFence(60)">
+          <span>🪵 Fence Lane</span>
+          <span>🪙 60</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <button id="start-btn" class="game-btn" style="margin-top: 15px;" onclick="openDifficultySelect()">Start Game</button>
+
+  <script>
+    const CROPS = {
+      Tomato: { name: 'Tomato', icon: '🍅', maxHp: 100, produceValue: 5 },
+      Corn:   { name: 'Corn',   icon: '🌽', maxHp: 180, produceValue: 12 }
+    };
+
+    const THREAT_TYPES = [
+      { type: 'bug', icon: '🐛', baseSpeed: 1.5, baseDamage: 25, hitsRequired: 1 },
+      { type: 'frost', icon: '❄️', baseSpeed: 1.0, baseDamage: 40, hitsRequired: 1 },
+      { type: 'weed', icon: '🌿', baseSpeed: 0.8, baseDamage: 50, hitsRequired: 1 },
+      { type: 'critter', icon: '🐿️', baseSpeed: 2.0, baseDamage: 30, hitsRequired: 1 }
+    ];
+
+    const DIFFICULTY_SETTINGS = {
+      easy:   { waveLength: 20, startingCoins: 100, speedMult: 0.7, damageMult: 0.7, spawnRate: 2500 },
+      medium: { waveLength: 15, startingCoins: 60,  speedMult: 1.0, damageMult: 1.0, spawnRate: 2000 },
+      hard:   { waveLength: 10, startingCoins: 40,  speedMult: 1.3, damageMult: 1.3, spawnRate: 1500 }
+    };
+
+    let selectedDifficulty = 'medium';
+    let coins = 50;
+    let wave = 1;
+    let waveTimer = 15;
+    let spawnRate = 2000;
+    let gameActive = false;
+    let endlessMode = false;
+    
+    let gameLoopId, spawnTimeoutId, harvestIntervalId, waveTimerIntervalId;
+
+    let storage = { Tomato: 0, Corn: 0 };
+
+    const plots = [
+      { plant: null, hp: 0, fence: false },
+      { plant: null, hp: 0, fence: false },
+      { plant: null, hp: 0, fence: false },
+      { plant: null, hp: 0, fence: false }
+    ];
+
+    let threats = [];
+
+    function openDifficultySelect() {
+      pauseGameTimers();
+      document.getElementById('start-btn').style.display = 'none';
+      document.getElementById('game-over-overlay').style.display = 'none';
+      document.getElementById('victory-overlay').style.display = 'none';
+      document.getElementById('difficulty-overlay').style.display = 'flex';
+    }
+
+    function startGame(difficulty) {
+      selectedDifficulty = difficulty || 'medium';
+      const settings = DIFFICULTY_SETTINGS[selectedDifficulty];
+
+      // Hide overlays
+      document.getElementById('difficulty-overlay').style.display = 'none';
+      document.getElementById('game-over-overlay').style.display = 'none';
+      document.getElementById('victory-overlay').style.display = 'none';
+
+      coins = settings.startingCoins;
+      wave = 1;
+      waveTimer = settings.waveLength;
+      spawnRate = settings.spawnRate;
+      storage = { Tomato: 0, Corn: 0 };
+      gameActive = true;
+      endlessMode = false;
+      threats = [];
+      
+      plots.forEach(p => { p.plant = null; p.hp = 0; p.fence = false; });
+      
+      plots[0].plant = CROPS.Tomato;
+      plots[0].hp = CROPS.Tomato.maxHp;
+
+      updateHUD();
+      renderPlots();
+
+      // Timers
+      gameLoopId = setInterval(updateGame, 30);
+      harvestIntervalId = setInterval(harvestCrops, 2500);
+      waveTimerIntervalId = setInterval(updateWaveTimer, 1000);
+      scheduleNextSpawn();
+    }
+
+    function updateWaveTimer() {
+      if (!gameActive) return;
+
+      waveTimer--;
+      if (waveTimer <= 0) {
+        wave++;
+        waveTimer = DIFFICULTY_SETTINGS[selectedDifficulty].waveLength;
+        
+        spawnRate = Math.max(400, spawnRate - 250); 
+
+        // Check for Win Condition at Wave 15
+        if (wave === 15 && !endlessMode) {
+          triggerVictory();
+          return;
+        }
+
+        if (wave % 3 === 0) {
+          spawnBoss();
+        }
+      }
+      updateHUD();
+    }
+
+    function triggerVictory() {
+      pauseGameTimers();
+      document.getElementById('victory-overlay').style.display = 'flex';
+    }
+
+    function enableEndlessMode() {
+      endlessMode = true;
+      document.getElementById('victory-overlay').style.display = 'none';
+      
+      // Resume timers
+      gameLoopId = setInterval(updateGame, 30);
+      harvestIntervalId = setInterval(harvestCrops, 2500);
+      waveTimerIntervalId = setInterval(updateWaveTimer, 1000);
+      scheduleNextSpawn();
+    }
+
+    function scheduleNextSpawn() {
+      if (!gameActive) return;
+
+      let count = 1;
+      if (wave >= 3 && Math.random() < 0.4) count = 2;
+      if (wave >= 6 && Math.random() < 0.3) count = 3;
+
+      for (let i = 0; i < count; i++) {
+        spawnThreat();
+      }
+
+      spawnTimeoutId = setTimeout(scheduleNextSpawn, spawnRate);
+    }
+
+    function spawnThreat() {
+      if (!gameActive) return;
+
+      const lane = Math.floor(Math.random() * 4);
+      const baseThreat = THREAT_TYPES[Math.floor(Math.random() * THREAT_TYPES.length)];
+      const settings = DIFFICULTY_SETTINGS[selectedDifficulty];
+
+      const speedMultiplier = (1 + (wave - 1) * 0.15) * settings.speedMult; 
+      const damageMultiplier = (1 + (wave - 1) * 0.20) * settings.damageMult;
+
+      const newThreat = {
+        id: Date.now() + Math.random(),
+        lane: lane,
+        x: 360,
+        icon: baseThreat.icon,
+        speed: baseThreat.baseSpeed * speedMultiplier,
+        damage: Math.round(baseThreat.baseDamage * damageMultiplier),
+        hits: baseThreat.hitsRequired,
+        isBoss: false
+      };
+
+      threats.push(newThreat);
+      createThreatElement(newThreat);
+    }
+
+    function spawnBoss() {
+      const lane = Math.floor(Math.random() * 4);
+      const settings = DIFFICULTY_SETTINGS[selectedDifficulty];
+
+      const boss = {
+        id: Date.now() + Math.random(),
+        lane: lane,
+        x: 360,
+        icon: '👹',
+        speed: 0.3 * settings.speedMult,
+        damage: Math.round(40 * settings.damageMult),
+        hits: selectedDifficulty === 'hard' ? 3 : 2,
+        isBoss: true
+      };
+
+      threats.push(boss);
+      createThreatElement(boss);
+    }
+
+    function createThreatElement(threat) {
+      const laneEl = document.getElementById(`lane-${threat.lane}`);
+      const el = document.createElement('div');
+      el.className = threat.isBoss ? 'threat boss' : 'threat';
+      el.id = `threat-${threat.id}`;
+      el.innerText = threat.icon;
+      el.style.right = '0px';
+
+      el.onclick = () => squashThreat(threat.id);
+      laneEl.appendChild(el);
+    }
+
+    function squashThreat(id) {
+      if (!gameActive) return;
+
+      const index = threats.findIndex(t => t.id === id);
+      if (index !== -1) {
+        const threat = threats[index];
+        threat.hits--;
+
+        if (threat.hits <= 0) {
+          threats.splice(index, 1);
+          const el = document.getElementById(`threat-${id}`);
+          if (el) el.remove();
+
+          coins += threat.isBoss ? 25 : 3;
+        } else {
+          const el = document.getElementById(`threat-${id}`);
+          if (el) el.style.opacity = '0.5';
+          setTimeout(() => { if (el) el.style.opacity = '1'; }, 100);
+        }
+
+        updateHUD();
+      }
+    }
+
+    function harvestCrops() {
+      if (!gameActive) return;
+
+      plots.forEach(plot => {
+        if (plot.plant) {
+          storage[plot.plant.name]++;
+        }
+      });
+
+      updateHUD();
+    }
+
+    function sellCrop(cropName) {
+      if (!gameActive || storage[cropName] <= 0) return;
+
+      const amount = storage[cropName];
+      const valuePerUnit = CROPS[cropName].produceValue;
+      const earnings = amount * valuePerUnit;
+
+      coins += earnings;
+      storage[cropName] = 0;
+
+      updateHUD();
+    }
+
+    function buyCrop(cropKey, cost) {
+      if (!gameActive || coins < cost) return;
+
+      const emptyIndex = plots.findIndex(p => p.plant === null);
+      if (emptyIndex !== -1) {
+        coins -= cost;
+        plots[emptyIndex].plant = CROPS[cropKey];
+        plots[emptyIndex].hp = CROPS[cropKey].maxHp;
+        updateHUD();
+        renderPlots();
+      } else {
+        alert("All plot slots are full!");
+      }
+    }
+
+    function healCrops(cost) {
+      if (!gameActive || coins < cost) return;
+
+      let healedAny = false;
+      plots.forEach(plot => {
+        if (plot.plant && plot.hp < plot.plant.maxHp) {
+          plot.hp = plot.plant.maxHp;
+          healedAny = true;
+        }
+      });
+
+      if (healedAny) {
+        coins -= cost;
+        updateHUD();
+        renderPlots();
+      }
+    }
+
+    function buyFence(cost) {
+      if (!gameActive || coins < cost) return;
+
+      const targetPlot = plots.find(p => p.plant && !p.fence);
+      if (targetPlot) {
+        coins -= cost;
+        targetPlot.fence = true;
+        updateHUD();
+        renderPlots();
+      } else {
+        alert("No eligible crop available for a fence!");
+      }
+    }
+
+    function updateGame() {
+      if (!gameActive) return;
+
+      for (let i = threats.length - 1; i >= 0; i--) {
+        const threat = threats[i];
+        threat.x -= threat.speed;
+
+        const el = document.getElementById(`threat-${threat.id}`);
+        if (el) {
+          el.style.left = `${threat.x}px`;
+        }
+
+        if (threat.x <= 0) {
+          damagePlot(threat.lane, threat.damage);
+
+          if (el) el.remove();
+          threats.splice(i, 1);
+        }
+      }
+    }
+
+    function damagePlot(laneIndex, damage) {
+      const plot = plots[laneIndex];
+
+      if (plot.plant) {
+        if (plot.fence) {
+          damage = Math.floor(damage * 0.5);
+          plot.fence = false;
+        }
+
+        plot.hp -= damage;
+        if (plot.hp <= 0) {
+          plot.plant = null;
+          plot.hp = 0;
+          plot.fence = false;
+        }
+      }
+
+      checkGameOver();
+      updateHUD();
+      renderPlots();
+    }
+
+    function checkGameOver() {
+      const aliveCrops = plots.filter(p => p.plant !== null).length;
+      if (aliveCrops === 0) {
+        endGame();
+      }
+    }
+
+    function renderPlots() {
+      plots.forEach((plot, index) => {
+        const plotEl = document.getElementById(`plot-${index}`);
+        
+        if (plot.plant) {
+          const hpPercent = Math.max(0, (plot.hp / plot.plant.maxHp) * 100);
+          const fenceHTML = plot.fence ? `<div class="fence-indicator">🪵</div>` : '';
+          
+          plotEl.innerHTML = `
+            ${fenceHTML}
+            <div class="plant-icon">${plot.plant.icon}</div>
+            <div class="hp-bar"><div class="hp-fill" style="width: ${hpPercent}%"></div></div>
+          `;
+        } else {
+          plotEl.innerHTML = `<small style="opacity: 0.6;">Empty Plot</small>`;
+        }
+      });
+    }
+
+    function updateHUD() {
+      document.getElementById('coins-display').innerText = coins;
+      document.getElementById('wave-display').innerText = wave + (endlessMode ? ' (Endless)' : '');
+      document.getElementById('timer-display').innerText = waveTimer;
+      document.getElementById('storage-tomatoes').innerText = storage.Tomato;
+      document.getElementById('storage-corn').innerText = storage.Corn;
+
+      // Sell buttons
+      document.getElementById('sell-tomato').disabled = storage.Tomato === 0 || !gameActive;
+      document.getElementById('sell-corn').disabled = storage.Corn === 0 || !gameActive;
+
+      // Shop buttons
+      document.getElementById('buy-tomato').disabled = coins < 30 || !gameActive;
+      document.getElementById('buy-corn').disabled = coins < 50 || !gameActive;
+      document.getElementById('buy-heal').disabled = coins < 40 || !gameActive;
+      document.getElementById('buy-fence').disabled = coins < 60 || !gameActive;
+    }
+
+    function pauseGameTimers() {
+      clearInterval(gameLoopId);
+      clearInterval(harvestIntervalId);
+      clearInterval(waveTimerIntervalId);
+      clearTimeout(spawnTimeoutId);
+    }
+
+    function endGame() {
+      gameActive = false;
+      pauseGameTimers();
+
+      document.querySelectorAll('.threat').forEach(el => el.remove());
+
+      // Show Retry Overlay
+      document.getElementById('final-wave-display').innerText = wave;
+      document.getElementById('game-over-overlay').style.display = 'flex';
+      
+      updateHUD();
+    }
+  </script>
+</body>
+</html>
